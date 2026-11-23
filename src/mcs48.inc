@@ -379,7 +379,7 @@ static MCS48_HOT __attribute__((noinline)) void execute(void) {
 		case 0x83: pull_pc(); break;
 		case 0x85: M.psw &= (u8)~F_FLAG; break;
 		case 0x86: polled = !irq; op_jcc(irq); break;
-		case 0x88: M48_BUS_R(); fetch(); break;              // orl bus,#n (nothing on the bus)
+		case 0x88: (void)M48_BUS_R(); fetch(); break;             // orl bus,#n (nothing on the bus)
 		case 0x89: M.p1 |= fetch(); PORT(M48_P1_W(M.p1)); break;
 		case 0x8a: M.p2 |= fetch(); PORT(M48_P2_W(M.p2)); break;
 		case 0x8c: case 0x8d: case 0x8e: case 0x8f: PORT(expander(EXP_OR, op & 3)); break;
@@ -388,7 +388,7 @@ static MCS48_HOT __attribute__((noinline)) void execute(void) {
 		case 0x95: M.psw ^= F_FLAG; break;
 		case 0x96: op_jcc(M.a != 0); break;
 		case 0x97: M.psw &= (u8)~C_FLAG; break;
-		case 0x98: M48_BUS_R(); fetch(); break;              // anl bus,#n
+		case 0x98: (void)M48_BUS_R(); fetch(); break;             // anl bus,#n
 		case 0x99: M.p1 &= fetch(); PORT(M48_P1_W(M.p1)); break;
 		case 0x9a: M.p2 &= fetch(); PORT(M48_P2_W(M.p2)); break;
 		case 0x9c: case 0x9d: case 0x9e: case 0x9f: PORT(expander(EXP_AND, op & 3)); break;

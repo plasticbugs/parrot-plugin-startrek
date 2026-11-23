@@ -1,5 +1,5 @@
 // license:BSD-3-Clause
-// copyright-holders:Aaron Giles, Nicola Salmoria
+// copyright-holders:Aaron Giles, O. Galibert
 //
 // st.h -- the Star Trek board (Sega G80 vector, 1982) as MAME 0.288
 // emulates it (segag80v.cpp, segag80v_v.cpp, segag80_m.cpp, segausb.cpp,
@@ -22,7 +22,7 @@
 typedef struct {
 	const uint8_t *maincpu;             // 0xc000: 1873.cpu-u25, then 1848-1870 (the PROM board)
 	const uint8_t *speech_cpu;          // 0x800: 1607.speech-u7
-	const uint8_t *speech_data;         // 0x4000: 1871.speech-u6, 1872.speech-u5, then zeros
+	const uint8_t *speech_data;         // 0x2000: 1871.speech-u6, 1872.speech-u5 (MAME's 0x4000 has zeros after)
 	const uint8_t *sine;                // 0x400: s-c.xyt-u39 (the vector generator's sine PROM)
 } st_roms_t;
 
@@ -79,9 +79,11 @@ extern const uint8_t *st_sine;          // the sine PROM
 // game's ORIENTATION_FLIP_Y: y 0 is the bottom of the picture; outside 0-832
 // is off it). A dot is a line of no length. colour: RGB 2 bits each (bits
 // 5-4 red, 3-2 green, 1-0 blue); symbol: the symbol it's in (its count in
-// the list, from 1, mod 256).
+// the list, from 1, mod 256); ox, oy: where that symbol starts (the point
+// its vectors turn about), in the same units, not clipped.
 typedef struct {
 	int16_t x0, y0, x1, y1;
+	int16_t ox, oy;
 	uint8_t colour, symbol;
 } st_seg_t;
 #define ST_SEGS 1200

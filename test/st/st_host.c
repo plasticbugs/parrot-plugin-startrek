@@ -122,8 +122,21 @@ static void regs48(uint8_t **pp, int which) {
 static struct { int frame; char name[16]; int v; } ev[65536];
 static int nev, botfrom;
 static FILE *record;
+static FILE *segs;
 static void on_vblank(void) {
 	int n = (int)st_frames;
+	if (segs) {                         // the frame's vectors: u32 frame, u16 count, then each's x0 y0 x1 y1 ox oy (s16) colour symbol
+		uint32_t f = (uint32_t)n;
+		fwrite(&f, 4, 1, segs);
+		fwrite(&st_nsegs, 2, 1, segs);
+		for (int i = 0; i < st_nsegs; i++) {
+			const st_seg_t *g = &st_segs[i];
+			int16_t c[6] = {g->x0, g->y0, g->x1, g->y1, g->ox, g->oy};
+			fwrite(c, 2, 6, segs);
+			fwrite(&g->colour, 1, 1, segs);
+			fwrite(&g->symbol, 1, 1, segs);
+		}
+	}
 	for (int i = 0; i < nev; i++) {
 		if (ev[i].frame != n) continue;
 		apply(ev[i].name, ev[i].v);
@@ -156,6 +169,7 @@ int main(int argc, char **argv) {
 		else if (!strcmp(argv[i], "-sndlog")) sndlog = fopen(argv[++i], "w");
 		else if (!strcmp(argv[i], "-record")) record = fopen(argv[++i], "w");
 		else if (!strcmp(argv[i], "-bot")) botfrom = atoi(argv[++i]);
+		else if (!strcmp(argv[i], "-segs")) segs = fopen(argv[++i], "wb");
 		else { fprintf(stderr, "st_host: what is %s?\n", argv[i]); return 2; }
 	}
 	load(dir, "1873.cpu-u25", maincpu, 0x800);

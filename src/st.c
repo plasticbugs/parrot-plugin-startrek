@@ -1,5 +1,5 @@
 // license:BSD-3-Clause
-// copyright-holders:Aaron Giles, Nicola Salmoria, O. Galibert
+// copyright-holders:Aaron Giles, O. Galibert
 //
 // st.c -- the Star Trek board as MAME 0.288 emulates it, in C for the cart:
 //
@@ -57,6 +57,31 @@ static uint64_t at_ticks(at_t t, uint32_t f) {
 	uint64_t s = epoch_s;
 	while (t >= AS_PER_SEC) { t -= AS_PER_SEC; s++; }
 	return s * f + mul_frac(t, f);
+}
+
+// floor(x / d) for a constant d, without the library's 64-bit divide
+// (slow on the M33): m = floor(2^64 / d) makes the high half of x * m
+// floor(x / d) or one less
+typedef struct { uint64_t d, m; } udiv_t;
+static inline uint64_t mulhi64(uint64_t a, uint64_t b) {
+	uint64_t al = (uint32_t)a, ah = a >> 32, bl = (uint32_t)b, bh = b >> 32;
+	uint64_t ll = al * bl, lh = al * bh, hl = ah * bl, hh = ah * bh;
+	uint64_t mid = (ll >> 32) + (uint32_t)lh + (uint32_t)hl;
+	return hh + (lh >> 32) + (hl >> 32) + (mid >> 32);
+}
+static inline uint64_t udiv(uint64_t x, const udiv_t *k) {
+	uint64_t q = mulhi64(x, k->m);
+	if (x - q * k->d >= k->d) q++;
+	return q;
+}
+#define UDIV(d) {(uint64_t)(d), (uint64_t)(~0ull / (uint64_t)(d))}
+
+// at_ticks for a rate that divides a second's attoseconds (the SP0250's
+// 10 kHz, the USB's 2 MHz): floor(t / (1e18 / f))
+static inline uint64_t at_ticks_exact(at_t t, uint32_t f, const udiv_t *k) {
+	uint64_t s = epoch_s;
+	while (t >= AS_PER_SEC) { t -= AS_PER_SEC; s++; }
+	return s * f + udiv((uint64_t)t, k);
 }
 
 // the screen: a vector screen, set_refresh_hz(40), 400 x 300, visible
@@ -378,8 +403,9 @@ static void axis_steps(unsigned u, int d, bool down, uint32_t n, uint32_t *lo, u
 	}
 	if (b > mtop) b = mtop;
 	if (a > b) return;
-	*lo = (uint32_t)((a * 256 + d - 1) / d);         // the first step with a move of a
-	*hi = b == mtop ? n : (uint32_t)(((b + 1) * 256 + d - 1) / d - 1);
+	// (a and b are under 2^11: 32-bit divides)
+	*lo = ((uint32_t)a * 256 + (uint32_t)d - 1) / (uint32_t)d;     // the first step with a move of a
+	*hi = b == mtop ? n : (((uint32_t)b + 1) * 256 + (uint32_t)d - 1) / (uint32_t)d - 1;
 }
 
 static ST_HOT void vectors_frame(void) {
@@ -402,6 +428,7 @@ static ST_HOT void vectors_frame(void) {
 		tr -= 10 * U51_AS;
 		vs.symbols++;
 		if (draw & 1) {
+			const int16_t ox = (int16_t)((int)(x & 0x7ff) - 0x200), oy = (int16_t)((int)(y & 0x7ff) - 0x200 - 96);
 			// (only the 11 bits adjust_xy looks at are kept: the high byte's bit 2 copied to bit 3 is past them)
 			while (tr > 0) {
 				uint8_t attrib = v[va++ & 0xfff];
@@ -417,7 +444,8 @@ static ST_HOT void vectors_frame(void) {
 				vs.vectors++;
 				uint32_t n = 0;
 				if (tr > 0) {
-					int64_t k = (tr + VCL_AS - 1) / VCL_AS;
+					static const udiv_t vcl_div = UDIV(VCL_AS);
+					int64_t k = (int64_t)udiv((uint64_t)(tr + VCL_AS - 1), &vcl_div);
 					n = (int64_t)length < k ? length : (uint32_t)k;
 				}
 				tr -= (int64_t)n * VCL_AS;
@@ -443,6 +471,8 @@ static ST_HOT void vectors_frame(void) {
 						s->y0 = (int16_t)(out1(y0p) - 96);
 						s->x1 = (int16_t)out1(x1p);
 						s->y1 = (int16_t)(out1(y1p) - 96);
+						s->ox = ox;
+						s->oy = oy;
 						s->colour = (uint8_t)colour;
 						s->symbol = (uint8_t)vs.symbols;
 					}
@@ -573,7 +603,8 @@ static uint16_t decrypt_offset(uint16_t a) {
 static uint8_t in_latch, out_latch, last_p2, work_bank, t1_clock;
 #define T1_MASK 0x10
 
-uint64_t st_usb_now(void) { return time_is_zero() ? 0 : at_ticks(now(), ST_USB_RATE) + 1; }
+static const udiv_t usb_tick_div = UDIV(AS_PER_SEC / ST_USB_RATE);
+uint64_t st_usb_now(void) { return time_is_zero() ? 0 : at_ticks_exact(now(), ST_USB_RATE, &usb_tick_div) + 1; }
 
 static uint8_t usb_status_r(void) {
 	stz_adjust_icount(-200);
@@ -620,7 +651,12 @@ void st_sp_p1_w(uint8_t d) { if (!(d & 0x80)) sp_t0 = 0; }
 void st_sp_p2_w(uint8_t d) { sp_p2 = d; }
 int st_sp_t0(void) { return sp_t0; }
 int st_sp_t1(void) { return sp_drq; }
-uint8_t st_sp_rom_r(uint8_t a) { return roms->speech_data[0x100 * (sp_p2 & 0x3f) + a]; }
+// (MAME's region is 0x4000 bytes, the two ROMs in its first 0x2000 and
+// zeros after them)
+uint8_t st_sp_rom_r(uint8_t a) {
+	const unsigned at = 0x100u * (sp_p2 & 0x3f) + a;
+	return at < 0x2000 ? roms->speech_data[at] : 0;
+}
 
 static struct {
 	int16_t F[6], B[6], z1[6], z2[6];
@@ -694,9 +730,10 @@ static ST_HOT int8_t sp_next(void) {
 }
 
 // sound_stream::update: the samples to now's, including it (none at time 0)
+static const udiv_t sp_tick_div = UDIV(AS_PER_SEC / ST_SP_RATE);
 static ST_HOT void sp_update(void) {
 	if (time_is_zero()) return;
-	uint64_t idx = at_ticks(now(), ST_SP_RATE);
+	uint64_t idx = at_ticks_exact(now(), ST_SP_RATE, &sp_tick_div);
 	while (sp.written <= idx) {
 		st_sp_sample((uint32_t)sp.written, sp_next());
 		sp.written++;
