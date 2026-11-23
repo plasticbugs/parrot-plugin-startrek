@@ -27,13 +27,14 @@ static uint64_t tick;                   // the 2 MHz tick the next step starts a
 uint32_t stsnd_samples;
 
 // DAC levels for 1.0 of MAME's. MAME's own startrek is louder than an
-// ordinary cartridge (-17.7 dBFS rms over the scripted game against about
-// -22). 1400 puts 13% of the samples in the DAC's soft knee, as Time
-// Pilot's 1900 puts 11% of its own (where its lists replay at -24.5 dBFS
-// on MAME's ColecoVision), which makes these about -23.6 (test/st/
-// soundcmp.sh's estimate: the replay needs the ColecoVision BIOS).
+// ordinary cartridge (-17.7 dBFS rms over the scripted game, against
+// about -22). At 1800 the lists replay at -22.5 dBFS rms on MAME's
+// ColecoVision over the seconds MAME's recording has sound
+// (test/st/soundcmp.sh), and 21% of those samples are in the DAC's soft
+// knee: it takes about 5 dB from the loudest effects and almost nothing
+// from the speech.
 #ifndef GAIN_LEVELS
-#define GAIN_LEVELS 1400.0f
+#define GAIN_LEVELS 1800.0f
 #endif
 
 // ---- the board's writes, in the order made ---------------------------------------------

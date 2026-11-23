@@ -20,18 +20,20 @@ At 150 MHz a list takes the cart 12.4 ms of its 16.77 ms on average, 13.9 ms in 
 
 The speech board's SP0250 makes its samples exactly as MAME's does, 10,000 a second. Each of the cart's samples, 5,962 a second, is the mean of the SP0250's samples it covers.
 
-MAME runs the Universal Sound Board's synthesizer at 2 MHz, which is too much for the cart. Here it runs at two steps a sample, about 11,900 a second. The square waves are integrated exactly over each step, the noise generator's bit is averaged over the step, the filters are converted to the step's rate, and the filters that channel 2 switches are weighted by how long channel 2 is high in the step. Against MAME's recording of the same game (`soundcmp.sh`), this model's level is within 0.2 dB (-17.9 against -17.7 dBFS rms) and the log-spectral distance is 5.3 dB. Through the DAC, as the lists carry it, the distance is 7.6 dB.
+MAME runs the Universal Sound Board's synthesizer at 2 MHz, which is too much for the cart. Here it runs at two steps a sample, about 11,900 a second. The square waves are integrated exactly over each step, the noise generator's bit is averaged over the step, the filters are converted to the step's rate, and the filters that channel 2 switches are weighted by how long channel 2 is high in the step. Against MAME's recording of the same game (`soundcmp.sh`), this model's level is within 0.2 dB (-17.9 against -17.7 dBFS rms) and the log-spectral distance is 5.3 dB. Played through the DAC and its knee on MAME's ColecoVision, the distance is 8.4 dB.
 
 The mix goes out as samples through the SN76489's three tones as a DAC, 100 in each list, with the lists run back to back. Each list also writes the whole sound chip, so a byte the console misreads lasts only one list.
 
-MAME's own Star Trek is louder than an ordinary cartridge: -17.7 dBFS rms over the scripted game, where ordinary cartridges give -20.5 to -23.9 (`docs/testing.md`). The gain puts 13% of a game's samples into the DAC's soft knee, as Time Pilot's puts 11%, and Time Pilot's lists replay at -24.5 dBFS on MAME's ColecoVision. That makes these about -23.6. This one is an estimate: the replay on MAME's ColecoVision needs the ColecoVision BIOS, which wasn't available when the plugin was made. With the BIOS in `MAME_ROMPATH`, `soundcmp.sh` measures it.
+MAME's own Star Trek is louder than an ordinary cartridge: -17.7 dBFS rms over the scripted game, where ordinary cartridges give -20.5 to -23.9 (`docs/testing.md`). Played through the SDK's kernel on MAME's ColecoVision, the lists come out at -22.5 dBFS rms over the seconds where MAME's recording has sound. 21% of those samples go into the DAC's soft knee, which takes about 5 dB off the loudest effects (phasers and explosions) and almost nothing off the speech.
+
+`tools/wavlevel.py` on the whole replay says less, about -25.4 over 76 seconds, against MAME's 36. The DAC's three tones are parked at a period of 1, a carrier at 112 kHz, and MAME's resampling leaves some of it at 17.6 kHz and -41 dBFS all the time, so the silent game-over and attract seconds count as sound. A real console's carrier is far above hearing. `spanlevel.py` measures the replay over MAME's seconds instead, and `soundcmp.sh` prints both.
 
 ## The tests
 
 - `test/run.sh` and `sim/test.sh` run the plugin on the kit's model of the console and in the simulator. With `ST_ROMS=path/to/startrek.zip` they play a game from a card with the ROMs on it, zipped, loose and at the top of the card. Without it they check only the missing-ROM message.
 - `compare.sh` and `trace.sh` check the board against MAME, frame by frame and instruction by instruction, for each of the three CPUs.
 - `cart_host.c` runs the plugin's loop on the Mac and writes what the console shows next to the vectors it was made from (`-png`), and the lists' sound (`-wav`).
-- `soundcmp.sh` compares the sound with MAME's and measures how loud it is.
+- `soundcmp.sh` compares the sound with MAME's and measures how loud it is (`spanlevel.py`).
 - `armcount.sh` times the plugin's code on an Arm model at 150 MHz (`ARM_PY`: a Python with unicorn, capstone and pyelftools).
 
 They need MAME's `startrek.zip` (`ST_ROMS`), and for the console's side the ColecoVision BIOS in `MAME_ROMPATH`. MAME runs headless. Neither file is in this repository, and everything the tests make from the ROMs goes under `$TMPDIR`.

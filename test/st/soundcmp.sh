@@ -44,7 +44,9 @@ if SDL_VIDEODRIVER=dummy mame -verifyroms coleco ${MAME_ROMPATH:+-rompath "$MAME
     MAME_WAV="$out/replay-raw.wav" "$kit/tools/mame-replay.sh" "$out/lists.bin" "$out/replay" "$secs" > /dev/null
     python3 -I "$here/wavalign.py" "$out/mame.wav" "$out/replay-raw.wav" "$out/replay.wav" 60036/59736
     echo "the lists on MAME's ColecoVision:"; "$out/sndcmp" "$out/mame.wav" "$out/replay.wav"
-    echo "how loud (an ordinary cartridge is about -22 dBFS rms):"
+    echo "how loud (an ordinary cartridge is about -22 dBFS rms), over the seconds MAME's recording has sound:"
+    python3 -I "$here/spanlevel.py" "$out/mame.wav" "$out/replay.wav" "$(grep -o 'clipped samples [0-9]*' "$out/cart.log" | grep -o '[0-9]*$')"
+    echo "(wavlevel.py on the whole replay also counts the silent seconds' parked-tone carrier, which MAME resamples to -41 dBFS:)"
     python3 -I "$kit/tools/wavlevel.py" "$out/replay-raw.wav"
 else
     echo "(no replay on MAME's ColecoVision: MAME can't find its BIOS, coleco.zip. MAME_ROMPATH names a folder with it.)"
