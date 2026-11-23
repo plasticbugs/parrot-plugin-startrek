@@ -23,6 +23,33 @@ also contains Lua (MIT).
 
 The 8x8 screen font's letter shapes come from the 1982 arcade game Mr. Do!
 
+## MAME
+
+The code in `src/` was written for this plugin. Parts of it are ports of
+MAME's code, or were written with MAME's code as the reference. That code
+is under the BSD 3-Clause license (`LICENSE`). It comes from MAME
+(<https://github.com/mamedev/mame>, tag `mame0288`), and its copyright
+holders are listed here.
+
+| Here | From MAME | Copyright holders |
+|---|---|---|
+| `src/st.c`, `src/st.h`: the main CPU's maps and ports, the wait states, the scrambled writes, the multiplier, the spinner, the coin and VBLANK interrupts, the vector generator's timing and its vectors | `src/mame/sega/segag80v.cpp`, `segag80v_v.cpp` | Aaron Giles |
+| `src/st.c`: the security chip's scrambling | `src/mame/sega/segag80_m.cpp` | Aaron Giles |
+| `src/st.c`: the Universal Sound Board's and the speech board's CPUs, latches, RAM and clocks | `src/mame/sega/segausb.cpp`, `segaspeech.cpp` | Aaron Giles |
+| `src/st.c`: the SP0250 | `src/devices/sound/sp0250.cpp` | Olivier Galibert |
+| `src/st.c`: the scheduler (timeslices, timers, input line events), the screen's timers and the sound streams' updates | `src/emu/schedule.cpp`, `diexec.cpp`, `screen.cpp`, `sound.cpp` | Aaron Giles; O. Galibert |
+| `src/stsnd.c`, `src/stsnd.h`: the Universal Sound Board's synthesizer, at a lower rate | `src/mame/sega/segausb.cpp` | Aaron Giles |
+| `src/mcs48.inc`, `src/st48.h`, `src/st48usb.c`, `src/st48sp.c` | `src/devices/cpu/mcs48/mcs48.cpp` | Dan Boris, Mirko Buffoni, Aaron Giles, Couriersud |
+| `src/z80.c`, `src/z80.h`, `src/stz80.c`, `src/stz80.h` | `src/devices/cpu/z80/z80.cpp`, `z80.h` | Juergen Buchmueller |
+| `src/z80_ops.h` (generated from `z80.lst` by `tools/st/z80gen.py`) | `src/devices/cpu/z80/z80.lst` | Juergen Buchmueller, Andrei I. Holub |
+| `src/stroms.c`: the ROMs' names, sizes and CRC-32s | `src/mame/sega/segag80v.cpp` | Aaron Giles |
+
+The zip reader in `src/swzip.c` follows RFC 1951 and the method of
+zlib's `contrib/puff` by Mark Adler (zlib license). It was written afresh.
+
+`src/stcv.c`, `src/strun.c` and the card and sample code follow the cart's
+Time Pilot, Donkey Kong and Star Wars plugins, by Parrot Cart.
+
 ## The plugin template's license
 
 ```
