@@ -20,7 +20,7 @@ On the ColecoVision controller:
 - The right fire button fires a photon torpedo.
 - Keypad * or # adds a coin.
 - Keypad 1 starts a one-player game, and keypad 2 a two-player game.
-- Press RESET on the console to go back to the menu.
+- Press RESET on the console to go back to the menu, or hold both fire buttons and \* for 2 seconds (Select and Start on a USB pad).
 
 On a USB pad, through a powered hub:
 

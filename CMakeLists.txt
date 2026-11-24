@@ -50,6 +50,6 @@ cvcart_features(star_trek PADS CARD)
 
 # The plugin (docs/plugin-rules.md): the ID is yours for good; the version
 # is the release's tag without its v.
-cvcart_plugin(star_trek ID parrotcart.startrek NAME "Star Trek" VERSION 0.1.1 BY "Parrot Cart"
+cvcart_plugin(star_trek ID parrotcart.startrek NAME "Star Trek" VERSION 0.1.2 BY "Parrot Cart"
               ICON src/icon.txt README CART-README.md FILE STARTREK.CVP
               HOME /STARTREK USES usb-host)
